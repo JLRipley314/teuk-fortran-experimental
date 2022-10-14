@@ -1,0 +1,8 @@
+*__pycache__*
+*.swp
+*.mod
+*.o
+*.pyc
+setup.py
+slurm_*
+plotting/*

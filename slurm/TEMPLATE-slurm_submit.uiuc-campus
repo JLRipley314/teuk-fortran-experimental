@@ -1,0 +1,58 @@
+#!/bin/bash
+#!
+#! Example SLURM job script for the UIUC campus cluster 
+#!
+#!#############################################################
+#! Modifiable parameters
+#!#############################################################
+
+#SBATCH --job-name=teuk
+#SBATCH --output=output.txt      
+#SBATCH --ntasks=1               
+#SBATCH --time=00:10:00          
+#SBATCH --mem-per-cpu=2000       
+#SBATCH --partition=GravityTheory
+
+#SBATCH --cpus-per-task=2
+
+#! We assume this is located in the directory we want to run
+cp $HOME/teuk-fortran/bin/default.run .
+
+CMD="$HOME/teuk-fortran/bin/default.run $(pwd) | tee output"
+
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+
+#! Work directory (i.e. where the job will run):
+workdir="$SLURM_SUBMIT_DIR"  # The value of SLURM_SUBMIT_DIR sets workdir to the directory
+                             # in which sbatch is run.
+
+export I_MPI_PIN_DOMAIN=omp:compact # Domains are $OMP_NUM_THREADS cores in size
+export I_MPI_PIN_ORDER=scatter # Adjacent domains have minimal sharing of caches/sockets
+
+###############################################################
+### You should not have to change anything below this line ####
+###############################################################
+
+cd $workdir
+echo -e "Changed directory to `pwd`.\n"
+
+JOBID=$SLURM_JOB_ID
+
+echo -e "JobID: $JOBID\n======"
+echo "Time: `date`"
+echo "Running on master node: `hostname`"
+echo "Current directory: `pwd`"
+
+if [ "$SLURM_JOB_NODELIST" ]; then
+        #! Create a machine file:
+        export NODEFILE=`generate_pbs_nodefile`
+        cat $NODEFILE | uniq > machine.file.$JOBID
+        echo -e "\nNodes allocated:\n================"
+        echo `cat machine.file.$JOBID | sed -e 's/\..*$//g'`
+fi
+
+echo -e "\nnumtasks=$numtasks, numnodes=$numnodes, mpi_tasks_per_node=$mpi_tasks_per_node (OMP_NUM_THREADS=$OMP_NUM_THREADS)"
+
+echo -e "\nExecuting command:\n==================\n$CMD\n"
+
+eval $CMD 
